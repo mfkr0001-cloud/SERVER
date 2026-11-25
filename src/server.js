@@ -16,6 +16,7 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const SESSION_SECRET = process.env.SESSION_SECRET;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 const APK_RELEASES_REPO = process.env.APK_RELEASES_REPO || "";
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || "";
 
 const COOKIE_SAME_SITE = (process.env.COOKIE_SAME_SITE || "none").toLowerCase();
 
@@ -167,18 +168,41 @@ async function loadApkCatalog() {
     APK_RELEASES_REPO +
     "/releases?per_page=100";
 
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "SylesStacks-Store"
+  };
+
+  if (GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
+  }
+
   const response = await fetch(apiUrl, {
-    headers: {
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "SylesStacks-Store"
-    },
-    signal: AbortSignal.timeout(12000)
+    method: "GET",
+    headers,
+    signal: AbortSignal.timeout(15000)
   });
 
   if (!response.ok) {
+    let githubMessage = "";
+
+    try {
+      const errorBody = await response.json();
+      githubMessage = errorBody.message || "";
+    } catch {
+      githubMessage = "Could not read GitHub error response";
+    }
+
+    console.error("GitHub API diagnostic:", {
+      status: response.status,
+      message: githubMessage,
+      tokenConfigured: Boolean(GITHUB_TOKEN),
+      repository: APK_RELEASES_REPO
+    });
+
     throw new Error(
-      `GitHub Releases request failed: ${response.status}`
+      `GitHub Releases request failed: ${response.status} - ${githubMessage}`
     );
   }
 
@@ -243,8 +267,9 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "sylesstacks-auth",
-    version: "1.1.0",
-    catalogConfigured: Boolean(APK_RELEASES_REPO)
+    version: "1.2.0",
+    catalogConfigured: Boolean(APK_RELEASES_REPO),
+    githubTokenConfigured: Boolean(GITHUB_TOKEN)
   });
 });
 
@@ -435,5 +460,9 @@ app.listen(PORT, () => {
     APK_RELEASES_REPO
       ? `APK catalog repository: ${APK_RELEASES_REPO}`
       : "APK catalog is not configured"
+  );
+
+  console.log(
+    `GitHub token configured: ${Boolean(GITHUB_TOKEN)}`
   );
 });
