@@ -221,6 +221,13 @@ async function loadApkCatalog() {
       ? release.assets
       : [];
 
+    const iconAsset = assets.find(asset =>
+      asset.name &&
+      asset.name.toLowerCase() === "icon.png" &&
+      asset.browser_download_url &&
+      asset.browser_download_url.startsWith("https://github.com/")
+    );
+
     for (const asset of assets) {
       if (
         !asset.name ||
@@ -245,6 +252,7 @@ async function loadApkCatalog() {
         size: asset.size,
         downloads: asset.download_count || 0,
         downloadUrl: asset.browser_download_url,
+        icon: iconAsset ? iconAsset.browser_download_url : "",
         publishedAt: release.published_at || null,
         repository: APK_RELEASES_REPO
       });
