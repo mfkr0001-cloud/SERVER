@@ -185,24 +185,24 @@ async function loadApkCatalog() {
   });
 
   if (!response.ok) {
-    let githubMessage = "";
+    let message = "Unknown GitHub error";
 
     try {
-      const errorBody = await response.json();
-      githubMessage = errorBody.message || "";
+      const errorData = await response.json();
+      message = errorData.message || message;
     } catch {
-      githubMessage = "Could not read GitHub error response";
+      // Keep default message.
     }
 
     console.error("GitHub API diagnostic:", {
       status: response.status,
-      message: githubMessage,
+      message,
       tokenConfigured: Boolean(GITHUB_TOKEN),
       repository: APK_RELEASES_REPO
     });
 
     throw new Error(
-      `GitHub Releases request failed: ${response.status} - ${githubMessage}`
+      `GitHub Releases request failed: ${response.status} - ${message}`
     );
   }
 
@@ -267,7 +267,7 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     service: "sylesstacks-auth",
-    version: "1.2.0",
+    version: "1.2.1",
     catalogConfigured: Boolean(APK_RELEASES_REPO),
     githubTokenConfigured: Boolean(GITHUB_TOKEN)
   });
